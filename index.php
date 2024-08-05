@@ -3,12 +3,12 @@
 define('API_URI', api_uri());
 // 设置中文歌词
 define('TLYRIC', true);
-// 设置歌单文件缓存及时间
+// 设置歌单文件缓存及时间-注意chown修改所属用户，不然无法写入缓存
 define('CACHE', false);
 define('CACHE_TIME', 86400);
 // 设置短期缓存-需要安装apcu
 define('APCU_CACHE', false);
-// 设置AUTH密钥-更改'meting-secret'
+// 设置AUTH密钥-更改'meting-secret'开启时请求需要携带auth参数，否则403
 define('AUTH', false);
 define('AUTH_SECRET', 'meting-secret');
 
@@ -20,7 +20,6 @@ if (!isset($_GET['type']) || !isset($_GET['id'])) {
 $server = isset($_GET['server']) ? $_GET['server'] : 'netease';
 $type = $_GET['type'];
 $id = $_GET['id'];
-
 if (AUTH) {
     $auth = isset($_GET['auth']) ? $_GET['auth'] : '';
     if (in_array($type, ['url', 'pic', 'lrc'])) {
@@ -28,11 +27,16 @@ if (AUTH) {
             http_response_code(403);
             exit;
         }
+    } else if (in_array($type , ['song', 'search', 'playlist', 'BotImage'])) {
+        if ($auth == '' || $auth != AUTH_SECRET) {
+            http_response_code(403);
+            exit;
+        }
     }
 }
 
 // 数据格式
-if (in_array($type, ['song', 'playlist'])) {
+if (in_array($type, ['song', 'playlist', 'search'])) {
     header('content-type: application/json; charset=utf-8;');
 } else if (in_array($type, ['name', 'lrc', 'artist'])) {
     header('content-type: text/plain; charset=utf-8;');
@@ -42,21 +46,82 @@ if (in_array($type, ['song', 'playlist'])) {
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 
-// include __DIR__ . '/vendor/autoload.php';
-// you can use 'Meting.php' instead of 'autoload.php'
-include __DIR__ . '/src/Meting.php';
+include __DIR__ . '/vendor/autoload.php';
 
 use Metowolf\Meting;
 
 $api = new Meting($server);
 $api->format(true);
 
-// 设置cookie
-/*if ($server == 'netease') {
-    $api->cookie('os=pc; osver=Microsoft-Windows-10-Professional-build-10586-64bit; appver=2.0.3.131777; channel=netease; MUSIC_U=****** ; __remember_me=true');
-}*/
+// 设置cookie，请自行取消注释并添加cookies
+/*
+if ($server == 'netease') {
+    $api->cookie('');
+}
+if ($server == 'tencent') {
+    $api->cookie('');
+}
+ */
+if ($type == 'search') {
+    $keyword = $id;
+    // 过滤掉文件名中不合法的字符，具有可能的RCE漏洞，如果有问题希望issues提及一下
+    $keyword = trim(preg_replace('/\$\d+/', '', str_replace('./', '.', $keyword)));
+    $keyword = preg_replace('/[\/\?%*:|"<>]/', '', $keyword);
+    if (CACHE) {
+        $file_path = __DIR__ . '/cache/search/' . $server . '_' . $keyword . '.json';
+        if (file_exists($file_path)) {
+            if ($_SERVER['REQUEST_TIME'] - filemtime($file_path) < CACHE_TIME) {
+                echo file_get_contents($file_path);
+                exit;
+            }
+        }
+    }
 
-if ($type == 'playlist') {
+    $data = $api->search($keyword);
+    if ($data == '[]') {
+        echo '{"result":"err: no search result"}';
+        exit;
+    }
+
+    $data = json_decode($data);
+    $search_result = array();
+    foreach ($data as $song) {
+        $search_result[] = array(
+            'id'     => $song->id,
+            'name'   => $song->name,
+            'artist' => implode('/', $song->artist),
+            'url'    => API_URI . '?server=' . $song->source . '&type=url&id=' . $song->url_id . (AUTH ? '&auth=' . auth($song->source . 'url' . $song->url_id) : ''),
+            'pic'    => API_URI . '?server=' . $song->source . '&type=pic&id=' . $song->pic_id . (AUTH ? '&auth=' . auth($song->source . 'pic' . $song->pic_id) : ''),
+            'lrc'    => API_URI . '?server=' . $song->source . '&type=lrc&id=' . $song->lyric_id . (AUTH ? '&auth=' . auth($song->source . 'lrc' . $song->lyric_id) : '')
+        );
+    }
+    $search_result = json_encode($search_result);
+
+    if (CACHE) {
+        file_put_contents($file_path, $search_result);
+    }
+
+    echo $search_result;
+}
+else if ($type == 'BotImage') {
+    $data = $api->song($id);
+    if ($data == '[]') {
+        echo '{"result":"err: no search result"}';
+        exit;
+    }
+
+    $data = json_decode($data);
+    $song = $data[0];
+    $src_name = rawurlencode($song->name);
+    $src_artist = rawurlencode(implode('/', $song->artist));
+    $src_cover = rawurlencode(API_URI . '?server=' . $song->source . '&type=pic&id=' . $song->pic_id . (AUTH ? '&auth=' . auth($song->source . 'pic' . $song->pic_id) : ''));
+    $src_lyrics = rawurlencode(API_URI . '?server=' . $song->source . '&type=lrc&id=' . $song->lyric_id . (AUTH ? '&auth=' . auth($song->source . 'lrc' . $song->lyric_id) : ''));
+    //此处的BotImage是为了给QQ机器人生成歌词图片用的，记得自己修改，嫌生成图片过慢可以自己修改源码，生成接口源码在这里：https://github.com/cnrenil/music-image-generate
+    $image = file_get_contents('https://botimage.renil.cc/?title='.$src_name.'&artist='.$src_artist.'&cover='.$src_cover.'&lyrics='.$src_lyrics);
+    header('Content-Type: image/png');
+    echo $image;
+}
+else if ($type == 'playlist') {
 
     if (CACHE) {
         $file_path = __DIR__ . '/cache/playlist/' . $server . '_' . $id . '.json';
@@ -169,7 +234,7 @@ function song2data($api, $song, $type, $id)
             break;
 
         case 'pic':
-            $data = json_decode($api->pic($id, 90))->url;
+            $data = json_decode($api->pic($id, 300))->url;
             break;
 
         case 'lrc':

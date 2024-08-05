@@ -1,0 +1,4 @@
+cache/playlist/*
+cache/search/*
+
+vendor/

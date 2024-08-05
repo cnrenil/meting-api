@@ -8,16 +8,16 @@
   "packages": [
     {
       "name": "metowolf/meting",
-      "version": "v1.5.7",
+      "version": "v1.5.11",
       "source": {
         "type": "git",
         "url": "https://github.com/metowolf/Meting.git",
-        "reference": "54178aa112da5db09f487d862d7ae62cbf7bc060"
+        "reference": "a88a1dffca16ae32f20cf009d7b65bfa1e9cdbad"
       },
       "dist": {
         "type": "zip",
-        "url": "https://api.github.com/repos/metowolf/Meting/zipball/54178aa112da5db09f487d862d7ae62cbf7bc060",
-        "reference": "54178aa112da5db09f487d862d7ae62cbf7bc060",
+        "url": "https://api.github.com/repos/metowolf/Meting/zipball/a88a1dffca16ae32f20cf009d7b65bfa1e9cdbad",
+        "reference": "a88a1dffca16ae32f20cf009d7b65bfa1e9cdbad",
         "shasum": ""
       },
       "require": {
@@ -36,7 +36,9 @@
         }
       },
       "notification-url": "https://packagist.org/downloads/",
-      "license": ["MIT"],
+      "license": [
+        "MIT"
+      ],
       "authors": [
         {
           "name": "metowolf",
@@ -46,8 +48,17 @@
       ],
       "description": "A powerful music API framework to accelerate development.",
       "homepage": "https://github.com/metowolf/Meting",
-      "keywords": ["lightweight", "lighty", "music api", "php music"],
-      "time": "2019-06-16T05:55:00+00:00"
+      "keywords": [
+        "lightweight",
+        "lighty",
+        "music api",
+        "php music"
+      ],
+      "support": {
+        "issues": "https://github.com/metowolf/Meting/issues",
+        "source": "https://github.com/metowolf/Meting"
+      },
+      "time": "2021-07-19T11:53:12+00:00"
     }
   ],
   "packages-dev": [],
@@ -57,5 +68,6 @@
   "prefer-stable": false,
   "prefer-lowest": false,
   "platform": [],
-  "platform-dev": []
+  "platform-dev": [],
+  "plugin-api-version": "2.6.0"
 }
