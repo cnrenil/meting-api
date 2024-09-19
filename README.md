@@ -14,7 +14,7 @@
 
 ```bash
 # 克隆仓库
-$ git clone https://github.com/injahow/meting-api.git
+$ git clone https://github.com/cnrenil/meting-api.git
 
 $ cd meting-api
 
